@@ -4,79 +4,111 @@
 [![Platform: Arduino Uno](https://img.shields.io/badge/Platform-Arduino%20Uno-blue.svg)](https://www.arduino.cc/)
 [![Analysis: MATLAB](https://img.shields.io/badge/Analysis-MATLAB%20R2021a-orange.svg)](https://www.mathworks.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Domain: Biomedical Instrumentation](https://img.shields.io/badge/Domain-Biomedical%20Optics%20%2F%20NIR-brightgreen.svg)]()
 
-This repository contains the official firmware, hardware schematics, PCB layouts, and calibration scripts for our IEEE-published paper: **"Development of a Non-Invasive Glucose Monitoring System Using Phototransistor Sensor and Regression Models for Glucose Prediction"** presented at the *2025 IEEE International Conference on Signal Processing, Information, Communication and Systems (SPICSCON)*.
+This repository contains the official firmware, hardware circuit layouts, experimental data, and regression calibration scripts for our IEEE-published paper: **"Development of a Non-Invasive Glucose Monitoring System Using Phototransistor Sensor and Regression Models for Glucose Prediction"** presented at the *2025 IEEE International Conference on Signal Processing, Information, Communication and Systems (SPICSCON)*[cite: 13].
 
 ---
 
-## Overview
+## Abstract & System Overview
 
-Frequent blood glucose monitoring is essential for diabetes management, yet conventional invasive finger-prick testing incurs physical pain, infection risks, and recurring strip costs[cite: 13, 16]. This project presents an affordable, pain-free non-invasive optical glucose monitor using single-wavelength Near-Infrared (NIR, 940 nm) reflectance spectroscopy coupled with a phototransistor detector and regression-based calibration.
+Frequent blood glucose monitoring is vital for effective diabetes management, but conventional invasive finger-prick testing incurs physical pain, infection risks, and recurring strip costs[cite: 13, 16]. This project presents an affordable, non-invasive optical glucose monitor using single-wavelength Near-Infrared (NIR, 940 nm) reflectance spectroscopy coupled with a phototransistor detector (LTH-1550) and regression-based calibration[cite: 13, 15]. The system was validated against a commercial invasive glucometer across 25 subjects, achieving a coefficient of determination ($R^2$) of 0.5127[cite: 13].
 
 ```mermaid
 flowchart TD
-    A["NIR LED (940 nm)"] -->|"Incident Photons"| B["Fingertip Capillary Bed"]
-    B -->|"Diffuse Reflectance"| C["Phototransistor Detector (LTH-1550)"]
-    C -->|"Analog Photocurrent -> Voltage"| D["Arduino Uno Edge Processing (A0)"]
-    D -->|"50-Sample Rolling Average"| E{"Threshold Check (ADC = 400)"}
-    E -- "ADC > 400 (Non-Diabetic)" --> F["y = 0.0115x + 0.9864"]
-    E -- "ADC ≤ 400 (Diabetic)" --> G["y = 0.0564x - 11.3220"]
-    F --> H["OLED Display (SSD1306)"]
-    G --> H
-    F --> I["HC-05 Bluetooth Telemetry"]
-    G --> I
-    I --> J[("Mobile Terminal App")]
+    subgraph OPTICS ["1. Optical Sensing Layer"]
+        A["NIR LED (940 nm)<br/>20 mA Forward Current"] -->|"Incident Light"| B["Fingertip Capillary Bed<br/>(Absorption & Scattering)"]
+        B -->|"Diffuse Reflectance"| C["Phototransistor Detector (LTH-1550)"]
+    end
+
+    subgraph EDGE ["2. Microcontroller & Edge Processing (Arduino Uno)"]
+        direction TB
+        D["Analog Signal Capture (A0)<br/>RC Filtering & ADC Conversion"]
+        E["50-Sample Rolling Average<br/>Outlier Rejection"]
+        F{"Cohort Segment<br/>(ADC Threshold = 400)"}
+        G["Non-Diabetic Model<br/><b>y = 0.0115x + 0.9864</b>"]
+        H["Diabetic Model<br/><b>y = 0.0564x - 11.3220</b>"]
+
+        D --> E --> F
+        F -- "ADC > 400" --> G
+        F -- "ADC ≤ 400" --> H
+    end
+
+    subgraph TELEMETRY ["3. Display & Wireless Telemetry"]
+        I["0.96 inch I2C OLED (SSD1306)<br/>Real-Time mmol/L Readout"]
+        J["HC-05 Bluetooth Module (D2/D3)<br/>9600 Baud UART Stream"]
+        K[("Smartphone Terminal App<br/>Continuous Monitoring")]
+        
+        G --> I
+        H --> I
+        G --> J
+        H --> J
+        J --> K
+    end
+
+    C --> D
 ```
 
 ---
 
-## Key Features
+## Key Highlights
 
-* **940 nm Single-Wavelength Sensing**: Operates in the 800–1200 nm optical window to minimize dominant water, protein, and lipid absorption bands while maintaining low cost[cite: 13].
-* **Photobiological Safety**: Operates at a forward current of 20 mA with optical power output $< 5\text{ mW/cm}^2$, fully compliant with skin exposure safety thresholds[cite: 13].
-* **Edge-Computed Regression**: Microcontroller-level cohort segmentation (Non-Diabetic vs. Diabetic calibration curves) achieving $R^2 = 0.5127$ against an invasive commercial glucometer[cite: 13].
-* **Wireless Telemetry & Display**: Dual reporting via a 0.96" I2C OLED display (SSD1306) and 9600-baud UART Bluetooth module (HC-05)[cite: 15, 18, 19].
+* **940 nm Spectral Window**: Operates in the second-overtone NIR band (800–1200 nm), reducing spectral interference from dominant water (1450 nm) and protein/lipid absorption bands while utilizing inexpensive silicon optical transducers[cite: 13].
+* **Photobiological Safety Compliance**: Operates at 20 mA forward current with an optical power density below $5\text{ mW/cm}^2$, remaining safe for direct human skin contact[cite: 13].
+* **Piecewise Linear Calibration**: Incorporates cohort-specific regression curves on the edge microcontroller to account for distinct optical response dynamics in healthy vs. diabetic capillary beds[cite: 13, 19].
+* **Real-Time Edge Output**: Transmits immediate glucose predictions (mmol/L) simultaneously to a 0.96" OLED display and via Bluetooth serial stream to Android mobile terminals[cite: 15, 18, 19].
 
 ---
 
-## Hardware Pin Mapping & Circuit Specifications
+## Microcontroller Pin Mapping & Hardware Setup
 
-| Component / Peripheral | Arduino Uno Pin | Protocol / Type | Electrical Specs | Function Description |
+| Component / Subsystem | Arduino Pin | Interface Type | Operating Voltage | Function Description |
 | :--- | :--- | :--- | :--- | :--- |
-| **LTH-1550 Sensor (Emitter)** | `5V` (via $180\Omega$ resistor) | Analog Power | 20 mA forward current | 940 nm NIR LED illumination[cite: 13, 18] |
-| **LTH-1550 Sensor (Collector)**| `A0` | Analog In | $0 - 5\text{V}$ ($180\Omega$ pull-down) | Captures diffuse reflected NIR intensity |
-| **OLED Display (SSD1306)** | `A4` (SDA), `A5` (SCL) | I2C (`0x3C`) | 5V / 3.3V | Real-time status and glucose readout[cite: 18, 19] |
-| **HC-05 Bluetooth Module** | `D2` (RX), `D3` (TX) | SoftwareSerial | 9600 Baud (5V/3.3V logic) | Streams continuous data to smartphone[cite: 18, 19] |
-| **Push Button** | `D4` | Digital In | Internal `INPUT_PULLUP` | User acquisition trigger[cite: 18, 19] |
+| **LTH-1550 (NIR LED Anode)** | `5V` (via $180\Omega$ resistor) | Power Rail | 5V DC (20 mA) | 940 nm optical emission[cite: 13, 18] |
+| **LTH-1550 (Phototransistor)** | `A0` | Analog Input | $0 - 5\text{V}$ | Measures diffuse reflected light intensity[cite: 18, 19] |
+| **SSD1306 OLED Display** | `A4` (SDA), `A5` (SCL) | I2C (`0x3C`) | 5V / 3.3V | Visual real-time glucose readout (mmol/L)[cite: 18, 19] |
+| **HC-05 Bluetooth (TX)** | `D2` | SoftSerial (RX) | 5V TTL | Microcontroller data reception[cite: 18, 19] |
+| **HC-05 Bluetooth (RX)** | `D3` | SoftSerial (TX) | 3.3V Logic | Wireless telemetry data transmission[cite: 18, 19] |
+| **Push Button** | `D4` | Digital Input | Internal `INPUT_PULLUP` | Measurement trigger / Session reset[cite: 18, 19] |
 
 ---
 
-## Mathematical Modeling & Calibration
+## Theoretical Principles & Calibration Model
 
-Light attenuation in biological tissue follows the modified Beer-Lambert and diffuse reflectance relationships[cite: 13]:
+Light attenuation in diffuse human tissue is governed by the modified Beer-Lambert Law[cite: 13]:
 
-$$I = I_0 e^{-\mu_{\text{eff}} L}, \quad \mu_{\text{eff}} = \sqrt{3(\mu_a + \mu_s')}$$[cite: 13]
+$$I = I_0 e^{-\mu_{\text{eff}} L}$$[cite: 13]
 
-The digitized sensor voltage ($x$) is averaged over 50 consecutive stable readings and converted into glucose concentration ($y$, mmol/L) using piecewise linear regression[cite: 13, 19]:
+where the effective attenuation coefficient is expressed as[cite: 13]:
 
-$$\text{Predicted Glucose } (y) = \begin{cases} 0.0115x + 0.9864, & x > 400 \quad \text{(Non-Diabetic)} \\ 0.0564x - 11.3220, & x \le 400 \quad \text{(Diabetic)} \end{cases}$$[cite: 13, 17, 19]
+$$\mu_{\text{eff}} = \sqrt{3 \mu_a (\mu_a + \mu_s')}$$[cite: 13]
+
+Elevated blood glucose alters tissue refractive index mismatch, increasing optical absorption ($\mu_a$) and reducing reduced scattering ($\mu_s'$), which leads to measurable decreases in reflected intensity ($R$)[cite: 13].
+
+The microcontroller records 50 consecutive ADC samples ($x$), computes the steady-state mean, and applies piecewise regression equations to predict glucose ($y$, in mmol/L)[cite: 13, 19]:
+
+$$y = \begin{cases} 0.0115x + 0.9864, & \text{if } x > 400 \quad \text{(Non-Diabetic Model)} \\ 0.0564x - 11.3220, & \text{if } x \le 400 \quad \text{(Diabetic Model)} \end{cases}$$[cite: 13, 17, 19]
 
 ---
 
-## Experimental Results ($N=25$)
+## Experimental Dataset & Evaluation ($N=25$)
 
-Testing across 25 subjects (15 non-diabetic, 10 diabetic, mean age $33 \pm 9$ years) demonstrated clear optical contrast tracking reference invasive values[cite: 13]:
+Evaluated on 25 volunteers (15 non-diabetic and 10 diabetic, mean age $33 \pm 9$ years) under controlled ambient conditions[cite: 13]:
 
-### Sample Experimental Data
+### Paired Clinical Data
 
-| Patient No | Subject Category | Mean Sensor ADC ($x$) | Invasive Ref (mmol/L) | Predicted Value (mmol/L) |
+| Subject ID | Group | Mean Sensor ADC ($x$) | Invasive Glucometer (mmol/L) | Predicted Glucose (mmol/L) |
 | :--- | :--- | :--- | :--- | :--- |
-| 1 | Non-Diabetic | 509 | 6.80 | 6.84 |
-| 2 | Non-Diabetic | 491 | 6.60 | 6.63 |
-| 3 | Non-Diabetic | 535 | 6.90 | 7.14 |
-| 4 | Diabetic | 389 | 8.80 | 10.61 |
-| 5 | Diabetic | 380 | 9.80 | 10.11 |
-| 6 | Diabetic | 397 | 11.60 | 11.07 |
+| `S01`[cite: 13] | Non-Diabetic[cite: 13] | 509 | 6.80[cite: 13] | 6.84 |
+| `S02`[cite: 13] | Non-Diabetic[cite: 13] | 491 | 6.60[cite: 13] | 6.63 |
+| `S03`[cite: 13] | Non-Diabetic[cite: 13] | 535 | 6.90[cite: 13] | 7.14 |
+| `S04`[cite: 13] | Non-Diabetic[cite: 13] | 483 | 6.50[cite: 13] | 6.54 |
+| `S05`[cite: 13] | Non-Diabetic[cite: 13] | 494 | 6.70[cite: 13] | 6.67 |
+| `S06`[cite: 13] | Diabetic[cite: 13] | 389 | 8.80[cite: 13] | 10.61 |
+| `S07`[cite: 13] | Diabetic[cite: 13] | 380 | 9.80[cite: 13] | 10.11 |
+| `S08`[cite: 13] | Diabetic[cite: 13] | 368 | 10.80[cite: 13] | 9.43 |
+| `S09`[cite: 13] | Diabetic[cite: 13] | 381 | 11.40[cite: 13] | 10.17 |
+| `S10`[cite: 13] | Diabetic[cite: 13] | 397 | 11.60[cite: 13] | 11.07 |
 
 ---
 
@@ -86,10 +118,12 @@ Testing across 25 subjects (15 non-diabetic, 10 diabetic, mean age $33 \pm 9$ ye
 ├── .gitignore
 ├── LICENSE
 ├── README.md
+├── docs/
+│   ├── IEEE_SPICSCON_Paper.pdf
+│   └── Presentation_Slides.pptx
 ├── hardware/
-│   ├── schematic.pdf
-│   ├── pcb_layout.pdf
-│   └── pin_mapping.md
+│   ├── SCH_Schematic.pdf
+│   └── PCB_Layout.pdf
 ├── src/
 │   └── glucose_monitor.ino
 ├── matlab/
@@ -102,40 +136,41 @@ Testing across 25 subjects (15 non-diabetic, 10 diabetic, mean age $33 \pm 9$ ye
 
 ## Getting Started
 
-### Arduino Setup
-1. Open `src/glucose_monitor.ino` in the Arduino IDE[cite: 19].
-2. Install required libraries via Library Manager:
+### 1. Arduino Firmware Setup
+1. Connect the Arduino Uno to your workstation via USB[cite: 15, 18].
+2. Open `src/glucose_monitor.ino` in the Arduino IDE[cite: 19].
+3. Install required dependencies via **Library Manager**:
    * `Adafruit SSD1306`
    * `Adafruit GFX Library`
-3. Select **Arduino Uno** and upload the sketch (`Ctrl + U`)[cite: 15, 18].
-4. Pair mobile Bluetooth terminal to `HC-05` at **9600 baud**[cite: 18, 19].
+4. Select **Tools** $\rightarrow$ **Board** $\rightarrow$ **Arduino Uno** and upload the code[cite: 15, 18].
+5. Pair your mobile device to the `HC-05` Bluetooth module (Default PIN: `1234` or `0000`) at **9600 baud** to view real-time data stream[cite: 18, 19].
 
-### MATLAB Analysis
-1. Open `matlab/regression_analysis.m` in MATLAB[cite: 16, 17].
-2. Ensure `data/patient_dataset.csv` is in the path.
-3. Run the script to reproduce linear regression plots and $R^2$ statistics.
+### 2. MATLAB Analysis & Calibration
+1. Open MATLAB and navigate to the `matlab/` folder[cite: 16].
+2. Run `regression_analysis.m` to generate the linear calibration curves and compute the $R^2$ score against `data/patient_dataset.csv`[cite: 13, 17].
 
 ---
 
 ## Authors
 
-* **Dip Muhuri** - *Department of Biomedical Engineering, CUET* - [dipmuhuri27@gmail.com](mailto:dipmuhuri27@gmail.com)[cite: 13]
-* **Sifat Chowdhury** - *Department of Biomedical Engineering, CUET* - [sifansifat97@gmail.com](mailto:sifansifat97@gmail.com)[cite: 13]
-* **Dip Paul** - *Department of Biomedical Engineering, CUET* - [dippaul21dp@gmail.com](mailto:dippaul21dp@gmail.com)[cite: 13]
+* **Dip Muhuri** - *Department of Biomedical Engineering, Chittagong University of Engineering & Technology (CUET)* - [dipmuhuri27@gmail.com](mailto:dipmuhuri27@gmail.com)[cite: 13]
+* **Sifat Chowdhury** - *Department of Biomedical Engineering, Chittagong University of Engineering & Technology (CUET)* - [sifansifat97@gmail.com](mailto:sifansifat97@gmail.com)[cite: 13]
+* **Dip Paul** - *Department of Biomedical Engineering, Chittagong University of Engineering & Technology (CUET)* - [dippaul21dp@gmail.com](mailto:dippaul21dp@gmail.com)[cite: 13]
 
 ---
 
 ## Citation
 
-If you use this work, circuit design, or dataset, please cite our IEEE conference paper:
+If you use this hardware schematic, code, or experimental dataset in your research, please cite our IEEE conference paper:
 
 ```bibtex
 @inproceedings{muhuri2025glucose,
   author={Muhuri, Dip and Chowdhury, Sifat and Paul, Dip},
-  booktitle={2025 IEEE International Conference on Signal Processing, Information, Communication and Systems (SPICSCON)}, 
-  title={Development of a Non-Invasive Glucose Monitoring System Using Phototransistor Sensor and Regression Models for Glucose Prediction}, 
-  year={2025},
+  title={Development of a Non-Invasive Glucose Monitoring System Using Phototransistor Sensor and Regression Models for Glucose Prediction},
+  booktitle={2025 IEEE International Conference on Signal Processing, Information, Communication and Systems (SPICSCON)},
   pages={110--114},
+  year={2025},
+  publisher={IEEE},
   doi={10.1109/SPICSCON69221.2025.11504207}
 }
 ```
