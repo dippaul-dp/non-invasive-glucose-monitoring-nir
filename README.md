@@ -165,12 +165,12 @@ If you use this hardware schematic, code, or experimental dataset in your resear
 
 ```bibtex
 @inproceedings{muhuri2025glucose,
-  author={Muhuri, Dip and Chowdhury, Sifat and Paul, Dip},
+  author={Dip Muhuri and Sifat Chowdhury and Dip Paul},
   title={Development of a Non-Invasive Glucose Monitoring System Using Phototransistor Sensor and Regression Models for Glucose Prediction},
   booktitle={2025 IEEE International Conference on Signal Processing, Information, Communication and Systems (SPICSCON)},
   pages={110--114},
   year={2025},
-  publisher={IEEE},
+  organization={IEEE},
   doi={10.1109/SPICSCON69221.2025.11504207}
 }
 ```
