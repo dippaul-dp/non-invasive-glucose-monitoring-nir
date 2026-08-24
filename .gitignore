@@ -1,0 +1,19 @@
+# Arduino compilation artifacts
+*.hex
+*.elf
+*.o
+*.bin
+build/
+*.build/
+
+# MATLAB temporary files
+*.asv
+*.m~
+*.fig
+
+# OS & IDE files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
