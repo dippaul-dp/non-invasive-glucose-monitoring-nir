@@ -95,6 +95,23 @@ Evaluated on 25 volunteers (15 non-diabetic and 10 diabetic, mean age $33 \pm 9$
 
 ---
 
+## Repository Structure
+
+```text
+non-invasive-glucose-monitoring-nir/
+├── .gitignore
+├── LICENSE
+├── README.md
+├── src/
+│   └── glucose_monitor.ino
+├── matlab/
+│   └── regression_analysis.m
+└── data/
+    └── patient_dataset.csv
+```
+
+---
+
 ## Getting Started
 
 ### 1. Arduino Firmware Setup
@@ -121,7 +138,7 @@ Evaluated on 25 volunteers (15 non-diabetic and 10 diabetic, mean age $33 \pm 9$
 
 ```bibtex
 @inproceedings{muhuri2025glucose,
-  author={ Dip Muhuri, Sifat Chowdhury and Dip Paul},
+  author={Dip Muhuri, Sifat Chowdhury and Dip Paul},
   title={Development of a Non-Invasive Glucose Monitoring System Using Phototransistor Sensor and Regression Models for Glucose Prediction},
   booktitle={2025 IEEE International Conference on Signal Processing, Information, Communication and Systems (SPICSCON)},
   pages={110--114},
